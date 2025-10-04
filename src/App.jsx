@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// URL absoluta del backend - REEMPLAZA con tu URL real de Render
-const API_BASE = 'https://tu-backend.onrender.com'; // ← CAMBIA ESTO
+const API_BASE = 'https://hackaton-nasa-backend.onrender.com/';
 
 // Datos de fallback por si el backend no responde
 const FALLBACK_DATA = {
