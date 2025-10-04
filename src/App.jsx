@@ -1,48 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-const API_BASE = 'https://hackaton-nasa-backend.onrender.com/';
-
-// Datos de fallback por si el backend no responde
-const FALLBACK_DATA = {
-  cities: [
-    { id: 'lima', name: 'Lima', status: 'CRÍTICO', health_score: 35 },
-    { id: 'huanuco', name: 'Huánuco', status: 'SALUDABLE', health_score: 82 },
-    { id: 'cusco', name: 'Cusco', status: 'MODERADO', health_score: 58 },
-    { id: 'arequipa', name: 'Arequipa', status: 'MODERADO', health_score: 62 }
-  ],
-  analysis: {
-    lima: {
-      name: "Lima Metropolitana",
-      status: "CRÍTICO",
-      blue_ratio: 0.68,
-      orange_ratio: 0.32,
-      health_score: 35,
-      description: "Capital del Perú, mayor concentración urbana",
-      image_url: "https://images.pexels.com/photos/29038651/pexels-photo-29038651.jpeg",
-      history: [
-        { year: 2020, blue_ratio: 0.56, orange_ratio: 0.44 },
-        { year: 2021, blue_ratio: 0.60, orange_ratio: 0.40 },
-        { year: 2022, blue_ratio: 0.64, orange_ratio: 0.36 },
-        { year: 2023, blue_ratio: 0.68, orange_ratio: 0.32 }
-      ],
-      recommendations: [
-        "Reemplazo urgente de LED azules en Lima",
-        "Implementar horarios de apagado nocturno",
-        "Auditoría lumínica cada 3 meses",
-        "Campaña de concienciación ciudadana"
-      ]
-    }
-    // ... agregar datos para las otras ciudades
-  }
-};
+const API_BASE = 'https://hackaton-nasa-backend.onrender.com';
 
 function App() {
-  const [cities, setCities] = useState(FALLBACK_DATA.cities);
-  const [selectedCity, setSelectedCity] = useState('lima');
-  const [analysis, setAnalysis] = useState(FALLBACK_DATA.analysis.lima);
+  const [cities, setCities] = useState([]);
+  const [selectedCity, setSelectedCity] = useState('');
+  const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [backendOnline, setBackendOnline] = useState(false);
+  const [backendOnline, setBackendOnline] = useState(true);
 
   useEffect(() => {
     checkBackendStatus();
@@ -56,82 +22,62 @@ function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'cors'
       });
       
       if (response.ok) {
         setBackendOnline(true);
-        console.log('✅ Backend conectado');
       } else {
         setBackendOnline(false);
-        console.log('⚠️ Usando datos locales');
       }
     } catch (error) {
       setBackendOnline(false);
-      console.log('❌ Backend offline, usando datos locales');
     }
   };
 
   const fetchCities = async () => {
-    if (!backendOnline) {
-      setCities(FALLBACK_DATA.cities);
-      return;
-    }
-
     try {
       const response = await fetch(`${API_BASE}/api/cities`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'cors'
       });
       
       if (response.ok) {
         const data = await response.json();
         setCities(data);
-      } else {
-        setCities(FALLBACK_DATA.cities);
+        if (data.length > 0) {
+          setSelectedCity(data[0].id);
+          analyzeCity(data[0].id);
+        }
       }
     } catch (error) {
-      setCities(FALLBACK_DATA.cities);
+      console.error('Error fetching cities:', error);
     }
   };
 
   const analyzeCity = async (cityId) => {
-    setLoading(true);
+    if (!cityId) return;
     
-    if (!backendOnline && FALLBACK_DATA.analysis[cityId]) {
-      setAnalysis(FALLBACK_DATA.analysis[cityId]);
-      setLoading(false);
-      return;
-    }
-
+    setLoading(true);
     try {
       const response = await fetch(`${API_BASE}/api/analyze/${cityId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
-        mode: 'cors'
       });
       
       if (response.ok) {
         const data = await response.json();
         setAnalysis(data);
-      } else if (FALLBACK_DATA.analysis[cityId]) {
-        setAnalysis(FALLBACK_DATA.analysis[cityId]);
       }
     } catch (error) {
-      if (FALLBACK_DATA.analysis[cityId]) {
-        setAnalysis(FALLBACK_DATA.analysis[cityId]);
-      }
+      console.error('Error analyzing city:', error);
     }
-    
     setLoading(false);
   };
 
-  // El resto de tu componente igual...
   const getStatusColor = (status) => {
     switch (status) {
       case 'SALUDABLE': return 'success';
@@ -150,9 +96,11 @@ function App() {
   return (
     <div className="container py-4">
       {/* Indicador de estado del backend */}
-      <div className={`alert ${backendOnline ? 'alert-success' : 'alert-warning'} text-center`}>
-        {backendOnline ? '✅ Conectado al servidor NASA' : '⚠️ Modo demostración - Datos locales'}
-      </div>
+      {!backendOnline && (
+        <div className="alert alert-warning text-center">
+          ⚠️ Intentando conectar con el servidor...
+        </div>
+      )}
 
       <div className="text-center mb-4">
         <h1 className="display-5 text-primary">🌍 Light Pollution Guardian</h1>
@@ -193,14 +141,16 @@ function App() {
           <div className="spinner-border text-primary" role="status">
             <span className="visually-hidden">Cargando...</span>
           </div>
+          <p className="mt-2">Obteniendo datos del satélite...</p>
         </div>
       )}
 
-      {/* Resultados - Mismo código que antes */}
+      {/* Resultados */}
       {analysis && !loading && (
         <div className="row">
           <div className="col-lg-12">
-            {/* ... tu código de visualización existente */}
+            
+            {/* Tarjeta Principal */}
             <div className="card shadow-sm mb-4">
               <div className="row g-0">
                 <div className="col-md-5">
@@ -220,6 +170,10 @@ function App() {
                       <div>
                         <h3 className="card-title">{analysis.name}</h3>
                         <p className="text-muted">{analysis.description}</p>
+                        <p className="text-muted mb-0">
+                          <strong>Región:</strong> {analysis.region} | 
+                          <strong> Población:</strong> {analysis.population?.toLocaleString()}
+                        </p>
                       </div>
                       <span className={`badge bg-${getStatusColor(analysis.status)} fs-6`}>
                         {analysis.status}
@@ -241,40 +195,96 @@ function App() {
                       >
                         {analysis.health_score}
                       </div>
-                      <p className="mt-2">Puntaje de Salud</p>
+                      <p className="mt-2">Puntaje de Salud Lumínica</p>
+                      <small className="text-muted">0-100 (mayor es mejor)</small>
                     </div>
 
                     <div className="row">
                       <div className="col-md-6">
-                        <strong>🔵 LED Azul:</strong>
-                        <div className="progress mt-1">
+                        <strong>🔵 LED Azul (Contaminante):</strong>
+                        <div className="progress mt-1" style={{height: '25px'}}>
                           <div className="progress-bar bg-primary" style={{width: `${analysis.blue_ratio * 100}%`}}>
                             {(analysis.blue_ratio * 100).toFixed(1)}%
                           </div>
                         </div>
+                        <small className="text-muted">Mayor porcentaje = más contaminación</small>
                       </div>
                       <div className="col-md-6">
-                        <strong>🟠 Sodio Naranja:</strong>
-                        <div className="progress mt-1">
+                        <strong>🟠 Sodio Naranja (Saludable):</strong>
+                        <div className="progress mt-1" style={{height: '25px'}}>
                           <div className="progress-bar bg-warning" style={{width: `${analysis.orange_ratio * 100}%`}}>
                             {(analysis.orange_ratio * 100).toFixed(1)}%
                           </div>
                         </div>
+                        <small className="text-muted">Mayor porcentaje = menos contaminación</small>
                       </div>
+                    </div>
+
+                    <div className="mt-3">
+                      <small className="text-muted">
+                        📅 Actualizado: {analysis.last_updated} | 
+                        🛰️ Fuente: {analysis.data_source}
+                      </small>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Gráfico y recomendaciones... */}
+            {/* Gráfico de Evolución */}
+            <div className="card shadow-sm mb-4">
+              <div className="card-body">
+                <h5 className="card-title">📈 Evolución de la Contaminación Lumínica (2020-2023)</h5>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={analysis.history}>
+                    <XAxis dataKey="year" />
+                    <YAxis tickFormatter={(value) => `${(value * 100).toFixed(0)}%`} />
+                    <Tooltip formatter={(value) => `${(value * 100).toFixed(1)}%`} />
+                    <Legend />
+                    <Bar dataKey="blue_ratio" name="LED Azul" fill="#8884d8" />
+                    <Bar dataKey="orange_ratio" name="Sodio Naranja" fill="#ffc658" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Recomendaciones */}
+            <div className="card shadow-sm">
+              <div className="card-body">
+                <h5 className="card-title">💡 Plan de Acción para {analysis.name}</h5>
+                <div className="row">
+                  {analysis.recommendations?.map((recommendation, index) => (
+                    <div key={index} className="col-md-6 mb-3">
+                      <div className="d-flex align-items-start">
+                        <span className="badge bg-primary me-3 mt-1">{index + 1}</span>
+                        <span>{recommendation}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Mensaje cuando no hay datos */}
+      {!analysis && !loading && cities.length === 0 && (
+        <div className="text-center">
+          <div className="alert alert-info">
+            <h4>🌍 Bienvenido a Light Pollution Guardian</h4>
+            <p className="mb-0">Cargando datos de monitoreo satelital...</p>
           </div>
         </div>
       )}
 
       <footer className="mt-5 text-center text-muted">
         <hr />
-        <p>Light Pollution Guardian - NASA Space Apps Challenge 2024</p>
+        <p className="small">
+          <strong>Light Pollution Guardian</strong> - NASA Space Apps Challenge 2024 | 
+          Monitoreo de contaminación lumínica en ciudades del Perú
+        </p>
       </footer>
     </div>
   );
